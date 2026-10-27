@@ -1,749 +1,434 @@
-# Marine Engine Critical RPM — Torsional Vibration Analysis
+# Marine Engine Critical RPM --- Torsional Vibration Analysis
 
 ## Project Overview
 
-This project is a Python-based engineering analysis of **torsional vibration and critical rotational speeds** for a representative slow-speed, two-stroke marine main engine.
+This Python project investigates torsional vibration and candidate
+critical rotational speeds for a **representative slow-speed, two-stroke
+marine diesel engine**.
 
-The model represents a:
+The model is inspired by a Sulzer-class engine arrangement for
+educational purposes. It is not a model of a specific production engine
+and does not use verified manufacturer shafting data.
 
-* Sulzer-class slow-speed marine diesel engine
-* 6-cylinder configuration
-* 2-stroke operating cycle
-* 12,000 HP rated power
-* 105 RPM rated speed
-* Four lumped rotational inertias
-* Three torsional shaft stiffnesses
+The project progresses through:
 
-The project demonstrates how engine excitation orders can interact with torsional natural frequencies and produce critical-speed conditions.
+-   a four-inertia, three-shaft-section torsional model;
+-   natural-frequency calculation;
+-   excitation-order and critical-RPM calculations;
+-   critical-speed visualization;
+-   simplified forced-response estimation;
+-   alternating torque and torsional shear-stress calculations;
+-   shaft-diameter sensitivity;
+-   shaft geometry and stiffness estimates;
+-   comparison of the original and geometry-based models;
+-   a consolidated critical-RPM visualization.
 
-The analysis progresses from the basic mechanical model through natural-frequency calculation, critical RPM identification, forced response, torsional torque, shaft stress, and shaft-diameter sensitivity.
+## Important Engineering Disclaimer
 
----
+**This is an educational, representative calculation---not an approved
+marine-engine torsional-vibration analysis.**
 
-## Important Engineering Note
+Do not use these results to select an operating-speed restriction,
+approve a shaft line, establish a safe operating range, or make a
+vessel-safety decision. Real approval requires validated engine and
+shafting data, the actual excitation harmonics, propeller and coupling
+characteristics, damping, detailed analysis, and review by the engine
+manufacturer and relevant classification society.
 
-This project is an **educational and representative engineering model**.
+A mathematical intersection between an excitation order and a natural
+frequency is a **candidate critical speed**. An intersection alone does
+not prove that harmful resonance will occur.
 
-It is intended to demonstrate the principles and computational workflow of torsional vibration analysis.
+## 1. Representative Engine Data
 
-It is **not** a certified marine shafting calculation and must not be used as a substitute for:
+  Parameter                                         Model value
+  ------------------------------- -----------------------------
+  Engine class                      Sulzer-class representative
+  Cylinders                                                   6
+  Cycle                                              Two-stroke
+  Representative rated power                          12,000 HP
+  Representative rated speed                            105 RPM
+  Investigated operating range                      50--105 RPM
+  Rotational degrees of freedom                               4
+  Shaft sections                                              3
 
-* Classification Society calculations
-* Manufacturer's engine data
-* Propeller manufacturer's calculations
-* Detailed crankshaft analysis
-* Detailed shaft-line analysis
-* Approved torsional vibration calculations
-* Fatigue calculations
-* Actual material properties
-* Classification Society acceptance criteria
+For this simplified six-cylinder, two-stroke example, the main firing
+excitation is represented by the 6th order. The model also examines the
+12th, 18th, 24th, and 30th orders as mathematical harmonics.
 
-The engine is described as **Sulzer-class representative** rather than as a model of a specific production engine.
+## 2. Mechanical Model
 
----
+The system is represented by four lumped rotational inertias connected
+by three torsional springs:
 
-# 1. Project Objectives
-
-The main objectives are to:
-
-1. Build a simplified multi-degree-of-freedom torsional model.
-2. Define representative engine and shaft inertias.
-3. Define torsional shaft stiffnesses.
-4. Calculate torsional natural frequencies.
-5. Identify excitation-order intersections.
-6. Calculate candidate critical RPMs.
-7. Produce a critical-speed diagram.
-8. Calculate a simplified forced torsional response.
-9. Calculate alternating torsional torque.
-10. Estimate torsional shear stress.
-11. Investigate the influence of shaft diameter on torsional stress.
-
----
-
-# 2. Engineering Model
-
-The shafting system is represented by four rotational inertias connected by three torsional springs.
-
-Simplified arrangement:
-
-```text
+``` text
    Engine       Intermediate       Tail Shaft       Propeller
      J1              J2                J3               J4
-     |               |                 |                |
      O------ k1 -----O------ k2 -------O------ k3 ------O
 ```
 
-Where:
+The representative inertias are:
 
-* `J1` = engine equivalent rotational inertia
-* `J2` = intermediate shaft equivalent inertia
-* `J3` = tail shaft equivalent inertia
-* `J4` = propeller equivalent inertia
-* `k1` = torsional stiffness between engine and intermediate shaft
-* `k2` = torsional stiffness between intermediate and tail shaft
-* `k3` = torsional stiffness between tail shaft and propeller
+  Inertia            Value
+  --------- --------------
+  J1          12,000 kg·m²
+  J2           2,000 kg·m²
+  J3           2,500 kg·m²
+  J4          18,000 kg·m²
 
----
+The original shaft stiffnesses are:
 
-# 3. Representative Engine Data
+  Shaft section          Stiffness
+  --------------- ----------------
+  k1                23.30 MN·m/rad
+  k2                40.80 MN·m/rad
+  k3                40.80 MN·m/rad
 
-| Parameter       |                       Value |
-| --------------- | --------------------------: |
-| Engine type     | Sulzer-class representative |
-| Cylinders       |                           6 |
-| Cycle           |                    2-stroke |
-| Rated power     |                   12,000 HP |
-| Rated speed     |                     105 RPM |
-| Operating range |                  50–105 RPM |
+These are representative model inputs, not verified dimensions or
+properties from an actual engine.
 
-For a six-cylinder two-stroke engine, the main firing excitation was represented by the **6th order**.
+## 3. Mathematical Formulation
 
-The analysis also investigates:
+The undamped free-vibration model is:
 
-```text
-6th
-12th
-18th
-24th
-30th
-```
+\[ M`\ddot{\theta}`{=tex}+K`\theta=0`{=tex} \]
 
-excitation orders.
+where (M) is the inertia matrix, (K) is the torsional stiffness matrix,
+and (`\theta`{=tex}) is the vector of angular displacements.
 
----
+The natural modes are calculated from the generalized eigenvalue
+problem:
 
-# 4. Rotational Inertias
+\[ K`\phi`{=tex}=`\lambda `{=tex}M`\phi`{=tex} \]
 
-The model uses the following representative inertias:
+For each eigenvalue, the angular natural frequency and frequency in
+hertz are:
 
-| Component          |      Inertia |
-| ------------------ | -----------: |
-| Engine             | 12,000 kg·m² |
-| Intermediate shaft |  2,000 kg·m² |
-| Tail shaft         |  2,500 kg·m² |
-| Propeller          | 18,000 kg·m² |
+\[
+`\omega`{=tex}\_n=`\sqrt{\lambda_n}`{=tex},`\qquad `{=tex}f_n=`\frac{\omega_n}{2\pi}`{=tex}
+\]
 
-Therefore:
+The complete free-free system has a rigid-body mode near 0 Hz. The
+remaining three modes are the flexible torsional modes.
 
-```text
-J1 = 12000 kg·m²
-J2 =  2000 kg·m²
-J3 =  2500 kg·m²
-J4 = 18000 kg·m²
-```
+## 4. Critical RPM Calculation
 
----
+For excitation order (q), engine speed (N) in RPM, and excitation
+frequency (f_e) in hertz:
 
-# 5. Torsional Stiffness
+\[ f_e=`\frac{qN}{60}`{=tex} \]
 
-The representative shaft stiffnesses are:
+Equating the excitation frequency to a natural frequency gives the
+candidate critical speed:
 
-| Shaft section |      Stiffness |
-| ------------- | -------------: |
-| k1            | 23.30 MN·m/rad |
-| k2            | 40.80 MN·m/rad |
-| k3            | 40.80 MN·m/rad |
+\[ N_c=`\frac{60f_n}{q}`{=tex} \]
 
-In SI units:
+The program calculates intersections for orders 6, 12, 18, 24, and 30
+and identifies those falling within the representative 50--105 RPM
+range.
 
-```text
-k1 = 23,300,000 N·m/rad
-k2 = 40,800,000 N·m/rad
-k3 = 40,800,000 N·m/rad
-```
+## 5. Original-Model Natural Frequencies
 
----
+The original stiffness model gives the following flexible torsional
+frequencies:
 
-# 6. Mathematical Model
+  Flexible mode     Natural frequency
+  --------------- -------------------
+  Mode 1                    6.1509 Hz
+  Mode 2                   20.2574 Hz
+  Mode 3                   36.0141 Hz
 
-The torsional vibration system is represented by:
+The rigid-body mode is approximately 0 Hz and is not included in the
+flexible-mode table.
 
-```text
-M θ¨ + K θ = 0
-```
+## 6. Original-Model Candidate Critical Speeds
 
-where:
+The candidate intersections within the 50--105 RPM range are:
 
-* `M` = inertia matrix
-* `K` = torsional stiffness matrix
-* `θ` = vector of angular displacements
+  Mode       Excitation order   Candidate speed
+  -------- ------------------ -----------------
+  Mode 1                  6th         61.51 RPM
+  Mode 2                 12th        101.29 RPM
+  Mode 2                 18th         67.52 RPM
+  Mode 2                 24th         50.64 RPM
+  Mode 3                 24th         90.04 RPM
+  Mode 3                 30th         72.03 RPM
 
-The mass/inertia matrix is:
+These are mathematical candidates, not confirmed harmful resonance
+speeds.
 
-```text
-M =
+## 7. Simplified Forced Response, Torque, and Stress
 
-[12000     0       0       0]
-[    0  2000       0       0]
-[    0     0    2500       0]
-[    0     0       0   18000]
-```
+The project includes an illustrative forced-response calculation using a
+simplified damping assumption and representative excitation torque. The
+resulting angular response is used to estimate alternating shaft torque
+and torsional shear stress.
 
-The stiffness matrix is:
+The calculation is intended to demonstrate the workflow, not to predict
+the response of a real engine. Its output depends strongly on the
+assumed torque distribution, damping, shaft parameters, and
+simplifications in the response formulation.
 
-```text
-K =
+For a solid circular shaft, the nominal maximum torsional shear stress
+is estimated from:
 
-[ 23300000  -23300000         0         0]
-[-23300000   64100000 -40800000         0]
-[        0  -40800000  81600000 -40800000]
-[        0          0 -40800000  40800000]
-```
+\[ `\tau`{=tex}\_{`\max`{=tex}}=`\frac{16T}{\pi d^3}`{=tex} \]
 
-The natural frequencies are obtained from the generalized eigenvalue problem:
+where (T) is the alternating torque and (d) is the shaft diameter. This
+equation does not account for stress concentrations, keyways, fillets,
+material fatigue, or other real shaft-design details.
 
-```text
-K φ = λ M φ
-```
+**Important:** Forced-response values in this educational model should
+be read directly from the output of the saved `torsional_model.py`. They
+are not design allowables or validated predictions.
 
-and:
+## 8. Shaft-Diameter Sensitivity
 
-```text
-ω = sqrt(λ)
-```
+The project examines how the nominal torsional shear-stress estimate
+changes with shaft diameter while holding the calculated alternating
+torque constant.
 
-with:
+For the solid circular shaft equation, stress varies inversely with the
+cube of diameter:
 
-```text
-f = ω / (2π)
-```
+\[ `\tau`{=tex}\_{`\max`{=tex}}`\propto`{=tex}`\frac{1}{d^3}`{=tex} \]
 
----
+This is a sensitivity demonstration only. In a real system, changing
+shaft diameter also changes torsional stiffness and may therefore change
+natural frequencies and response.
 
-# 7. Natural Frequencies
+## 9. Geometry-Based Shaft Stiffness
 
-The calculated natural frequencies were:
+A later project stage estimates torsional stiffness from illustrative
+shaft dimensions using:
 
-| Mode                  |          Frequency |
-| --------------------- | -----------------: |
-| Rigid-body mode       | approximately 0 Hz |
-| First torsional mode  |          6.1509 Hz |
-| Second torsional mode |         20.2574 Hz |
-| Third torsional mode  |         36.0141 Hz |
+\[ k=`\frac{GJ_p}{L}`{=tex} \]
 
-The rigid-body mode is expected because the complete shafting system is free to rotate as a whole.
+For a solid circular shaft:
 
-The engineering torsional modes are therefore:
+\[ J_p=`\frac{\pi d^4}{32}`{=tex} \]
 
-```text
-6.1509 Hz
-20.2574 Hz
-36.0141 Hz
-```
+where (G) is the assumed shear modulus, (J_p) is the polar second moment
+of area, (L) is shaft length, and (d) is shaft diameter.
 
----
+The illustrative geometry uses:
 
-# 8. Critical RPM Calculation
+  -----------------------------------------------------------------------
+  Parameter               Section 1          Section 2          Section 3
+  -------------- ------------------ ------------------ ------------------
+  Diameter                  0.400 m            0.450 m            0.450 m
 
-For an excitation order `n`:
+  Length                      8.0 m              8.0 m              8.0 m
 
-```text
-f_excitation = n × RPM / 60
-```
+  Assumed shear              80 GPa             80 GPa             80 GPa
+  modulus                                              
 
-Therefore:
+  Calculated        25.133 MN·m/rad    40.258 MN·m/rad    40.258 MN·m/rad
+  stiffness                                            
+  -----------------------------------------------------------------------
 
-```text
-RPM_critical = 60 × f_n / n
-```
+These dimensions and material assumptions are illustrative. They are not
+actual Sulzer engine or vessel shafting dimensions.
 
-For the principal 6th-order excitation:
+The geometry-based stiffnesses are compared with the original stiffness
+values. The geometry-based model is a separate sensitivity case; it does
+not establish the correct shaft geometry for a real vessel.
 
-### First torsional mode
+## 10. Geometry-Based Natural Frequencies
 
-```text
-f = 6.1509 Hz
+Using the illustrative geometry-derived stiffnesses, the calculated
+flexible frequencies are:
 
-RPM = 60 × 6.1509 / 6
+  Flexible mode     Original model   Geometry-based model
+  --------------- ---------------- ----------------------
+  Mode 1                 6.1509 Hz              6.2326 Hz
+  Mode 2                20.2574 Hz             20.5097 Hz
+  Mode 3                36.0141 Hz             35.9748 Hz
 
-RPM ≈ 61.51 RPM
-```
+The small changes demonstrate how changing shaft stiffness can shift the
+system's natural frequencies. These values describe the two assumed
+mathematical models, not a validated physical shaft line.
 
-This lies inside the representative operating range of:
+## 11. Original vs. Geometry-Based Candidate Speeds
 
-```text
-50–105 RPM
-```
+The candidate speeds within 50--105 RPM compare as follows:
 
-Therefore the simplified model identifies:
+  Mode       Order   Original model   Geometry-based model               Change
+  -------- ------- ---------------- ---------------------- --------------------
+  Mode 1       6th        61.51 RPM              62.33 RPM   +0.82 RPM (+1.33%)
+  Mode 2      12th       101.29 RPM             102.55 RPM   +1.26 RPM (+1.25%)
+  Mode 2      18th        67.52 RPM              68.37 RPM   +0.84 RPM (+1.25%)
+  Mode 2      24th        50.64 RPM              51.27 RPM   +0.63 RPM (+1.25%)
+  Mode 3      24th        90.04 RPM              89.94 RPM   −0.10 RPM (−0.11%)
+  Mode 3      30th        72.03 RPM              71.95 RPM   −0.08 RPM (−0.11%)
 
-```text
-61.51 RPM
-```
+The comparison shows that the predicted change depends on the mode and
+excitation order. It does not, by itself, indicate whether a particular
+speed is safe or unsafe.
 
-as a candidate critical speed for the 6th-order excitation.
+## 12. Visualizations
 
----
+The program includes visualizations for the critical-speed diagram and a
+comparison of the original and geometry-based candidate speeds.
 
-# 9. Excitation-Order Intersections
+The comparison plot uses:
 
-The calculated mathematical intersections inside the 50–105 RPM operating range include approximately:
+-   circle markers for the original model;
+-   X markers for the geometry-based model;
+-   connecting lines to show the change between the two predictions;
+-   the representative 50--105 RPM operating range.
 
-| Natural frequency | Excitation order |    RPM |
-| ----------------: | ---------------: | -----: |
-|         6.1509 Hz |              6th |  61.51 |
-|        20.2574 Hz |             12th | 101.29 |
-|        20.2574 Hz |             18th |  67.52 |
-|        20.2574 Hz |             24th |  50.64 |
-|        36.0141 Hz |             24th |  90.04 |
-|        36.0141 Hz |             30th |  72.03 |
+Plots are explanatory aids. They do not replace a formal
+torsional-vibration report or an approved barred-speed-range assessment.
 
-These are **mathematical frequency intersections**.
+## 13. Software Requirements
 
-An intersection by itself does not establish that a dangerous torsional vibration condition exists.
+The project uses Python with the following packages:
 
-Actual vibration severity depends on factors including:
+-   NumPy --- numerical arrays and matrix operations;
+-   SciPy --- generalized eigenvalue calculation;
+-   Matplotlib --- plots and visualizations.
 
-* excitation torque amplitude
-* modal participation
-* damping
-* shaft geometry
-* crankshaft characteristics
-* coupling characteristics
-* propeller characteristics
-* material properties
-* operating condition
+The script uses `scipy.linalg.eigh` for the generalized symmetric
+eigenvalue problem.
 
----
+## 14. Running the Project on Windows
 
-# 10. Critical-Speed Diagram
+Open PowerShell and run:
 
-The project generates a critical-speed diagram showing:
-
-* Engine RPM
-* Excitation-order lines
-* Torsional natural frequencies
-* Frequency intersections
-* Operating speed range
-
-The diagram provides a visual representation of where excitation frequencies can coincide with torsional natural frequencies.
-
----
-
-# 11. Forced Torsional Response
-
-A simplified forced-response calculation was performed using:
-
-```text
-Damping ratio              = 0.030
-Excitation torque          = 1,000,000 N·m
-```
-
-The static torsional angle was calculated as:
-
-```text
-θ_static = T / k1
-```
-
-giving:
-
-```text
-θ_static = 0.042918 rad
-```
-
-or:
-
-```text
-θ_static = 2.459046°
-```
-
-The simplified forced-response calculation produced a maximum response at:
-
-```text
-Engine speed = 61.45 RPM
-```
-
-with:
-
-```text
-Torsional angle amplitude = 41.002531°
-```
-
-This is very close to the calculated 6th-order critical speed of:
-
-```text
-61.51 RPM
-```
-
-This demonstrates the resonance mechanism in the simplified model.
-
----
-
-# 12. Important Interpretation of the Forced Response
-
-The calculated:
-
-```text
-41.002531°
-```
-
-torsional angle should **not** be interpreted as an actual predicted shaft angle for a real marine engine.
-
-It results from deliberately simplified assumptions:
-
-```text
-Excitation torque = 1,000,000 N·m
-Damping ratio     = 3%
-Simplified modal response
-```
-
-A real marine torsional vibration calculation would require detailed excitation harmonics, modal participation factors, damping, shaft geometry, crankshaft properties, coupling characteristics, propeller characteristics, and other system data.
-
-The purpose of this calculation is to demonstrate the relationship:
-
-```text
-Excitation
-    ↓
-Natural frequency
-    ↓
-Resonance
-    ↓
-Large dynamic response
-```
-
----
-
-# 13. Torsional Vibration Stress
-
-The maximum simplified torsional angle was converted to radians:
-
-```text
-θmax = 0.715629 rad
-```
-
-The alternating torque was estimated using:
-
-```text
-T = k1 × θ
-```
-
-giving:
-
-```text
-Alternating torque = 16,674,160 N·m
-```
-
-or:
-
-```text
-Alternating torque = 16.674 MN·m
-```
-
-For a representative solid circular shaft:
-
-```text
-τ = 16T / (πd³)
-```
-
-Using:
-
-```text
-d = 0.800 m
-```
-
-the calculated torsional shear stress was:
-
-```text
-τ = 165.861 MPa
-```
-
-This is again a result of the simplified model and should not be treated as a certified design stress.
-
----
-
-# 14. Shaft Diameter Sensitivity
-
-The project investigates the effect of shaft diameter on torsional shear stress.
-
-The relationship is:
-
-```text
-τ = 16T / (πd³)
-```
-
-Therefore:
-
-```text
-τ ∝ 1/d³
-```
-
-Using the calculated alternating torque of approximately:
-
-```text
-16.674 MN·m
-```
-
-the following values were obtained:
-
-| Shaft diameter | Torsional stress |
-| -------------: | ---------------: |
-|         0.60 m |      393.152 MPa |
-|         0.65 m |      309.225 MPa |
-|         0.70 m |      247.583 MPa |
-|         0.75 m |      201.294 MPa |
-|         0.80 m |      165.861 MPa |
-|         0.85 m |      138.279 MPa |
-|         0.90 m |      116.489 MPa |
-|         0.95 m |       99.047 MPa |
-|         1.00 m |       84.921 MPa |
-
-This demonstrates the strong influence of shaft diameter on torsional shear stress.
-
----
-
-# 15. Project Workflow
-
-The complete analysis follows this sequence:
-
-```text
-Engine data
-     ↓
-Rotational inertias
-     ↓
-Torsional stiffness
-     ↓
-Mass and stiffness matrices
-     ↓
-Natural frequencies
-     ↓
-Excitation orders
-     ↓
-Critical RPMs
-     ↓
-Critical-speed diagram
-     ↓
-Forced torsional response
-     ↓
-Alternating torsional torque
-     ↓
-Torsional shear stress
-     ↓
-Shaft diameter sensitivity
-```
-
----
-
-# 16. Software Requirements
-
-The project uses Python.
-
-Recommended environment:
-
-```text
-Python 3.x
-NumPy
-Matplotlib
-```
-
-The project was developed and tested on Windows using a Python virtual environment.
-
----
-
-# 17. Installation
-
-Open PowerShell and navigate to the project:
-
-```powershell
+``` powershell
 cd C:\dev1\marine-engine-critical-rpm
-```
-
-Activate the virtual environment:
-
-```powershell
 .\.venv\Scripts\Activate.ps1
-```
-
-Install required packages if necessary:
-
-```powershell
-python -m pip install numpy matplotlib
-```
-
----
-
-# 18. Running the Program
-
-With the virtual environment activated:
-
-```powershell
+python -m py_compile torsional_model.py
 python torsional_model.py
 ```
 
-The program performs the complete analysis and produces the numerical results and engineering plots.
+The compile command checks Python syntax. If it returns to the
+PowerShell prompt without an error message, the syntax check passed.
 
----
+To run the program, execute `python torsional_model.py`. Read the
+console output for the calculated results and completion messages.
+Matplotlib may display figures in separate windows, depending on the
+local plotting environment.
 
-# 19. Opening the Project in Notepad++
+If the virtual environment does not exist, create it and install the
+required packages:
 
-The project file can be opened using:
-
-```powershell
-& "C:\Program Files\Notepad++\notepad++.exe" "C:\dev1\marine-engine-critical-rpm\torsional_model.py"
+``` powershell
+cd C:\dev1\marine-engine-critical-rpm
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install numpy scipy matplotlib
 ```
 
----
+Then run the syntax check and program commands above.
 
-# 20. Project Structure
+## 15. Main Engineering Assumptions
 
-The main project directory is:
+The model makes the following simplifications:
 
-```text
-C:\dev1\marine-engine-critical-rpm
+1.  The engine and propeller system is represented by four lumped
+    rotational inertias.
+2.  Shaft sections are represented by linear torsional springs.
+3.  The model has four rotational degrees of freedom.
+4.  The engine is represented as a six-cylinder, two-stroke example.
+5.  The main firing excitation is represented by the 6th order.
+6.  Higher excitation orders are examined as mathematical harmonics.
+7.  Damping is represented by a simplified damping ratio.
+8.  Forced response uses a simplified frequency-response formulation.
+9.  A representative excitation torque is assumed.
+10. Shaft stress is estimated using a solid circular shaft equation.
+11. The shaft-diameter sensitivity study holds the calculated
+    alternating torque constant.
+12. Geometry-based shaft dimensions and shear modulus are illustrative.
+13. The model does not perform a full nonlinear or transient torsional
+    analysis.
+
+## 16. Limitations
+
+The project does not include:
+
+-   detailed crankshaft geometry;
+-   individual cylinder gas-pressure harmonics;
+-   cylinder-to-cylinder firing variations;
+-   crankshaft flexibility;
+-   bearing dynamics;
+-   propeller hydrodynamic excitation;
+-   gearbox dynamics;
+-   flexible couplings;
+-   viscous torsional dampers;
+-   nonlinear stiffness or damping;
+-   temperature-dependent material properties;
+-   fatigue-life calculations;
+-   classification-society acceptance calculations;
+-   actual manufacturer shafting data;
+-   finite-element analysis;
+-   experimental validation.
+
+Consequently, the numerical results should be treated as representative
+engineering calculations for learning and software development.
+
+## 17. Engineering Significance
+
+The project demonstrates the relationship:
+
+``` text
+Excitation frequency approaches a natural frequency
+                     ↓
+          Potential resonance condition
+                     ↓
+       Potentially increased vibration response
+                     ↓
+        Potentially increased alternating torque
+                     ↓
+        Potentially increased torsional stress
 ```
 
-The main Python program is:
+Critical RPM depends on the interaction between engine excitation orders
+and shafting natural frequencies. Changes to inertia or shaft stiffness
+can change the natural frequencies and therefore shift candidate
+critical speeds.
 
-```text
-torsional_model.py
-```
+## 18. Final Project Summary
 
-A typical project structure is:
+The completed project demonstrates the following workflow:
 
-```text
-marine-engine-critical-rpm/
-│
-├── .venv/
-│
-├── torsional_model.py
-│
-└── README.md
-```
+1.  Define a simplified multi-inertia torsional system.
+2.  Calculate its flexible natural frequencies.
+3.  Calculate candidate critical speeds for several excitation orders.
+4.  identify intersections within the representative operating range.
+5.  Visualize the critical-speed relationships.
+6.  Estimate a simplified forced torsional response.
+7.  Use the response to demonstrate alternating torque and nominal
+    shear-stress calculations.
+8.  Explore the effect of shaft diameter on nominal stress.
+9.  Calculate illustrative shaft stiffness from assumed geometry.
+10. Compare the original and geometry-based models.
+11. Plot the candidate-speed changes between the models.
 
-The `.venv` directory contains the local Python virtual environment and normally should not be committed to Git.
+Key reference results for the original model are 6.1509 Hz, 20.2574 Hz,
+and 36.0141 Hz for its three flexible torsional modes. The first-mode,
+6th-order intersection is approximately 61.51 RPM. The illustrative
+geometry-based model gives flexible frequencies of 6.2326 Hz, 20.5097
+Hz, and 35.9748 Hz, with six candidate intersections in the 50--105 RPM
+range for both models.
 
----
+## 19. Conclusion
 
-# 21. Main Engineering Assumptions
+This project provides an introductory computational workflow connecting
+mechanical engineering theory, matrix mathematics, Python programming,
+numerical analysis, and engineering visualization.
 
-The model uses several simplifications:
+It demonstrates how excitation orders can intersect shafting natural
+frequencies, how those intersections produce candidate critical speeds,
+and how a simplified response can be used to illustrate alternating
+torque and torsional shear stress.
 
-1. The engine is represented by lumped rotational inertias.
-2. Shaft sections are represented by linear torsional springs.
-3. The shafting model has four rotational degrees of freedom.
-4. The engine is represented by six cylinders.
-5. The main firing excitation is represented by the 6th order.
-6. Higher excitation orders are investigated as mathematical harmonics.
-7. Damping is represented by a simplified damping ratio.
-8. The forced response uses a simplified frequency-response formulation.
-9. A representative excitation torque is assumed.
-10. Shaft stress is calculated using a solid circular shaft equation.
-11. The shaft diameter sensitivity analysis keeps the calculated alternating torque constant.
-12. The model does not perform a full nonlinear or transient torsional analysis.
+**Project status:** The educational workflow and the
+original-versus-geometry-based comparison are complete through the
+critical-RPM visualization stage. Further development is optional and is
+not required to understand or present the completed work.
 
----
-
-# 22. Limitations
-
-The following are outside the scope of this project:
-
-* Detailed crankshaft geometry
-* Individual cylinder gas-pressure harmonics
-* Fuel injection variations
-* Crankshaft flexibility
-* Bearing dynamics
-* Propeller hydrodynamic excitation
-* Gearbox dynamics
-* Flexible couplings
-* Viscous torsional dampers
-* Nonlinear stiffness
-* Nonlinear damping
-* Temperature-dependent material properties
-* Fatigue-life calculations
-* Classification Society acceptance calculations
-* Actual manufacturer shafting data
-* Finite-element analysis
-* Experimental validation
-
-Consequently, the numerical results should be considered **representative engineering calculations for learning and software development**.
-
----
-
-# 23. Engineering Significance
-
-Despite the simplifications, the project demonstrates several important principles of marine torsional vibration analysis.
-
-The most important relationship is:
-
-```text
-Excitation frequency ≈ Natural frequency
-                    ↓
-                 Resonance
-                    ↓
-          Increased vibration response
-                    ↓
-          Increased alternating torque
-                    ↓
-          Increased torsional stress
-```
-
-The project also demonstrates that critical RPM is not simply a property of engine speed.
-
-It depends on the interaction between:
-
-```text
-Engine excitation orders
-        +
-Shafting natural frequencies
-```
-
-Therefore, changing shafting characteristics can change the locations of critical speeds.
-
----
-
-# 24. Final Project Results
-
-The completed representative model produced:
-
-```text
-Rated engine speed             : 105 RPM
-
-Torsional natural frequencies:
-    Mode 1                     : 6.1509 Hz
-    Mode 2                     : 20.2574 Hz
-    Mode 3                     : 36.0141 Hz
-
-Main 6th-order critical speed:
-                                61.51 RPM
-
-Simplified forced-response peak:
-                                61.45 RPM
-
-Maximum simplified angle:
-                                41.002531°
-
-Alternating torque:
-                                16.674 MN·m
-
-Stress at 0.800 m shaft:
-                                165.861 MPa
-```
-
-The close agreement between the 6th-order critical-speed calculation and the forced-response peak demonstrates the expected resonance behavior of the simplified model.
-
----
-
-# 25. Conclusion
-
-This project provides a complete introductory computational workflow for investigating torsional vibration in a representative slow-speed marine diesel engine.
-
-It connects:
-
-```text
-Mechanical engineering theory
-            +
-Matrix mathematics
-            +
-Python programming
-            +
-Numerical analysis
-            +
-Engineering visualization
-```
-
-The completed model demonstrates how a marine engine's excitation orders can interact with shafting natural frequencies and produce candidate critical speeds, and how a simplified resonance calculation can be extended to estimate alternating torque and torsional shear stress.
-
-The project is intended as a foundation for future improvements such as:
-
-* detailed harmonic excitation,
-* full damped multi-degree-of-freedom forced response,
-* mode-shape parti
+The results remain illustrative and must not be interpreted as an
+approved analysis of a real marine engine or shaft line.

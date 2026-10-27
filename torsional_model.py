@@ -607,55 +607,72 @@ print("\n" + "=" * 70)
 print("STEP 11 COMPLETE")
 print("=" * 70)
 
+
 # ============================================================
 # STEP 12
-# FORCED TORSIONAL VIBRATION RESPONSE
+# FOUR-INERTIA MODAL FORCED TORSIONAL VIBRATION RESPONSE
 # ============================================================
 
 print("\n" + "=" * 70)
-print("STEP 12 - FORCED TORSIONAL VIBRATION RESPONSE")
+print("STEP 12 - FOUR-INERTIA MODAL FORCED RESPONSE")
 print("=" * 70)
 
-
 # ------------------------------------------------------------
-# SIMPLIFIED DAMPING
+# MODAL DAMPING
 # ------------------------------------------------------------
-#
-# We use a small damping ratio for this educational
-# engineering model.
-#
-# This is NOT measured damping for a real Sulzer engine.
+# Illustrative damping ratio for every flexible torsional mode.
+# This is not measured damping data for a real engine.
 # ------------------------------------------------------------
 
 damping_ratio = 0.03
 
-
 # ------------------------------------------------------------
-# EXCITATION TORQUE
+# ILLUSTRATIVE HARMONIC EXCITATION TORQUE
 # ------------------------------------------------------------
+# Assumed torque amplitudes:
+#   +T at inertia J1 (engine end)
+#   -T at inertia J4 (propeller end)
+#    0 at the two intermediate inertias
 #
-# Simplified harmonic torque amplitude.
+# The equal and opposite torques give zero net external torque,
+# avoiding excitation of the free rigid-body rotation mode.
 #
-# The value is illustrative and is used to demonstrate
-# the resonance response.
+# This is an illustrative excitation pattern, not a measured
+# engine torque distribution.
 # ------------------------------------------------------------
 
-excitation_torque = 1.0e6       # N*m
+excitation_torque = 1.0e6  # N*m
 
-
-# ------------------------------------------------------------
-# SELECT FIRST TORSIONAL MODE
-# ------------------------------------------------------------
-
-first_mode_frequency = critical_rpms[0][1]
-
-first_mode_omega = (
-    2.0 * np.pi * first_mode_frequency
-)
-
+force_vector = np.array([
+    excitation_torque,
+    0.0,
+    0.0,
+    -excitation_torque
+])
 
 # ------------------------------------------------------------
-# SPEED RANGE
+# SELECT FLEXIBLE TORSIONAL MODES
+# ------------------------------------------------------------
+# The eigenvalue solution contains a near-zero rigid-body mode.
+# Exclude that mode from the forced flexible-mode calculation.
+# ------------------------------------------------------------
+
+nonzero_modes = np.where(frequency_hz >= 0.001)[0]
+
+Phi = eigenvectors[:, nonzero_modes]
+omega_n = omega[nonzero_modes]
+
+modal_force = Phi.T @ force_vector
+
+print("\nMODAL RESPONSE PARAMETERS")
+print("-" * 70)
+
+print(f"Modal damping ratio        : {damping_ratio:.3f}")
+print(f"Excitation torque amplitude: {excitation_torque:,.0f} N*m")
+print(f"Flexible modes included    : {len(nonzero_modes)}")
+
+# ------------------------------------------------------------
+# ENGINE SPEED RANGE
 # ------------------------------------------------------------
 
 rpm_response = np.linspace(
@@ -664,9 +681,12 @@ rpm_response = np.linspace(
     1000
 )
 
-
 # ------------------------------------------------------------
 # EXCITATION FREQUENCY
+# ------------------------------------------------------------
+# The selected excitation is the engine firing order.
+# For the current six-cylinder, two-stroke example, the
+# firing order is six if firing_order = 6 in the earlier code.
 # ------------------------------------------------------------
 
 excitation_frequency = (
@@ -677,171 +697,182 @@ excitation_omega = (
     2.0 * np.pi * excitation_frequency
 )
 
-
 # ------------------------------------------------------------
-# FREQUENCY RATIO
+# COMPLEX MODAL RESPONSE
+# ------------------------------------------------------------
+# For each flexible mode:
+#
+# q_i = Q_i /
+#       (omega_n_i^2 - omega_exc^2
+#        + j * 2 * zeta * omega_n_i * omega_exc)
+#
+# The eigenvectors returned by scipy.linalg.eigh(K, M) are
+# mass-normalized, so this expression uses modal mass = 1.
 # ------------------------------------------------------------
 
-frequency_ratio = (
-    excitation_omega /
-    first_mode_omega
+response_complex = np.zeros(
+    (4, len(rpm_response)),
+    dtype=complex
 )
 
+for j, omega_exc in enumerate(excitation_omega):
 
-# ------------------------------------------------------------
-# SIMPLIFIED SINGLE-MODE RESPONSE
-# ------------------------------------------------------------
-#
-# Dynamic magnification factor:
-#
-#       1
-# ----------------
-# sqrt((1-r^2)^2 + (2*zeta*r)^2)
-#
-# ------------------------------------------------------------
-
-dynamic_magnification = (
-    1.0 /
-    np.sqrt(
-        (1.0 - frequency_ratio**2)**2
-        +
-        (2.0 * damping_ratio * frequency_ratio)**2
+    denominator = (
+        omega_n**2
+        - omega_exc**2
+        + 1j
+        * 2.0
+        * damping_ratio
+        * omega_n
+        * omega_exc
     )
+
+    modal_response = modal_force / denominator
+
+    response_complex[:, j] = Phi @ modal_response
+
+# ------------------------------------------------------------
+# RELATIVE TWIST ACROSS EACH SHAFT SECTION
+# ------------------------------------------------------------
+# Absolute angular displacement is not the same as shaft twist.
+# Shaft twist is the difference between adjacent inertias.
+# ------------------------------------------------------------
+
+relative_twist_1 = (
+    response_complex[0, :]
+    - response_complex[1, :]
 )
 
-
-# ------------------------------------------------------------
-# STATIC TORSIONAL ANGLE
-# ------------------------------------------------------------
-
-static_angle = (
-    excitation_torque /
-    k1
+relative_twist_2 = (
+    response_complex[1, :]
+    - response_complex[2, :]
 )
 
-
-# ------------------------------------------------------------
-# DYNAMIC TORSIONAL ANGLE
-# ------------------------------------------------------------
-
-torsional_angle = (
-    static_angle *
-    dynamic_magnification
+relative_twist_3 = (
+    response_complex[2, :]
+    - response_complex[3, :]
 )
 
-
-# ------------------------------------------------------------
-# CONVERT TO DEGREES
-# ------------------------------------------------------------
-
-torsional_angle_deg = (
-    torsional_angle *
-    180.0 /
-    np.pi
+relative_twist_1_deg = np.rad2deg(
+    np.abs(relative_twist_1)
 )
 
+relative_twist_2_deg = np.rad2deg(
+    np.abs(relative_twist_2)
+)
+
+relative_twist_3_deg = np.rad2deg(
+    np.abs(relative_twist_3)
+)
+
+# Preserve this variable name because Step 13 uses it.
+# It now represents twist across shaft section 1 (J1-J2).
+torsional_angle_deg = relative_twist_1_deg
 
 # ------------------------------------------------------------
-# FIND MAXIMUM RESPONSE
+# FIND MAXIMUM TWIST IN SHAFT SECTION 1
 # ------------------------------------------------------------
 
-maximum_index = np.argmax(
-    torsional_angle_deg
-)
+maximum_index = np.argmax(torsional_angle_deg)
 
-maximum_rpm = (
-    rpm_response[maximum_index]
-)
+maximum_rpm = rpm_response[maximum_index]
 
-maximum_angle = (
-    torsional_angle_deg[maximum_index]
-)
+maximum_angle = torsional_angle_deg[maximum_index]
 
+# First flexible-mode crossing for the selected firing order.
+first_mode_critical_rpm = (
+    60.0
+    * omega_n[0]
+    / (2.0 * np.pi * firing_order)
+)
 
 # ------------------------------------------------------------
 # DISPLAY RESULTS
 # ------------------------------------------------------------
 
-print("\nFORCED RESPONSE PARAMETERS")
+print("\nMAXIMUM RELATIVE TWIST - SHAFT SECTION 1 (J1-J2)")
+print("-" * 70)
+
+print(f"Engine speed               : {maximum_rpm:.2f} RPM")
+print(f"Twist amplitude             : {maximum_angle:.6f} deg")
+print(f"Twist amplitude             : {np.deg2rad(maximum_angle):.8f} rad")
+
+print("\nMAXIMUM TWIST BY SHAFT SECTION")
 print("-" * 70)
 
 print(
-    f"Damping ratio              : "
-    f"{damping_ratio:.3f}"
+    f"Section 1 (J1-J2): "
+    f"{np.max(relative_twist_1_deg):.6f} deg"
 )
 
 print(
-    f"Excitation torque amplitude: "
-    f"{excitation_torque:,.0f} N*m"
+    f"Section 2 (J2-J3): "
+    f"{np.max(relative_twist_2_deg):.6f} deg"
 )
 
 print(
-    f"Static torsional angle     : "
-    f"{static_angle:.6f} rad"
+    f"Section 3 (J3-J4): "
+    f"{np.max(relative_twist_3_deg):.6f} deg"
 )
 
-print(
-    f"Static torsional angle     : "
-    f"{static_angle * 180.0 / np.pi:.6f} deg"
-)
-
-
-print("\nMAXIMUM SIMPLIFIED RESPONSE")
+print("\nFIRST FLEXIBLE-MODE CROSSING")
 print("-" * 70)
 
 print(
-    f"Engine speed               : "
-    f"{maximum_rpm:.2f} RPM"
+    f"Candidate speed for the selected firing order: "
+    f"{first_mode_critical_rpm:.2f} RPM"
 )
-
-print(
-    f"Torsional angle amplitude : "
-    f"{maximum_angle:.6f} deg"
-)
-
 
 # ------------------------------------------------------------
-# PLOT FORCED RESPONSE
+# PLOT RELATIVE TWIST RESPONSE
 # ------------------------------------------------------------
 
 plt.figure(figsize=(11, 7))
 
 plt.plot(
     rpm_response,
-    torsional_angle_deg
+    relative_twist_1_deg,
+    label="Shaft section 1 (J1-J2)"
+)
+
+plt.plot(
+    rpm_response,
+    relative_twist_2_deg,
+    label="Shaft section 2 (J2-J3)"
+)
+
+plt.plot(
+    rpm_response,
+    relative_twist_3_deg,
+    label="Shaft section 3 (J3-J4)"
 )
 
 plt.axvline(
-    61.51,
+    first_mode_critical_rpm,
     linestyle="--",
-    label="Candidate critical speed: 61.51 RPM"
+    label=(
+        f"First-mode crossing: "
+        f"{first_mode_critical_rpm:.2f} RPM"
+    )
 )
 
-plt.xlabel(
-    "Engine Speed [RPM]"
-)
+plt.xlabel("Engine Speed [RPM]")
 
-plt.ylabel(
-    "Torsional Angle Amplitude [deg]"
-)
+plt.ylabel("Relative Twist Amplitude [deg]")
 
 plt.title(
-    "Simplified 6th-Order Forced Torsional Response"
+    "Four-Inertia Modal Forced Torsional Response"
 )
 
 plt.grid(True)
 
-plt.xlim(
-    minimum_rpm,
-    rated_rpm
-)
+plt.xlim(minimum_rpm, rated_rpm)
 
 plt.legend()
 
 plt.tight_layout()
 
 plt.show()
-
 
 # ------------------------------------------------------------
 # STEP 12 COMPLETE
@@ -1007,3 +1038,743 @@ print()
 print("=" * 70)
 print("STEP 14 COMPLETE")
 print("=" * 70)
+
+# ============================================================
+# STEP 15 - SHAFT STIFFNESS AND GEOMETRY CONSISTENCY CHECK
+# ============================================================
+
+print("\n" + "=" * 70)
+print("STEP 15 - SHAFT STIFFNESS AND GEOMETRY CONSISTENCY")
+print("=" * 70)
+
+# ------------------------------------------------------------
+# ASSUMED MATERIAL AND SHAFT DIAMETER
+# ------------------------------------------------------------
+# Illustrative assumptions, not verified data for a real engine.
+# ------------------------------------------------------------
+
+shear_modulus = 80.0e9       # Pa = 80 GPa
+reference_diameter = 0.800   # m; diameter assumed in Step 13
+
+# Torsional stiffness values from the four-inertia model.
+shaft_stiffnesses = {
+    "Section 1 (J1-J2)": 23.30e6,
+    "Section 2 (J2-J3)": 40.80e6,
+    "Section 3 (J3-J4)": 40.80e6,
+}
+
+# ------------------------------------------------------------
+# POLAR SECOND MOMENT OF AREA
+# ------------------------------------------------------------
+# For a solid circular shaft:
+# Jp = pi * d^4 / 32
+# ------------------------------------------------------------
+
+polar_moment = (
+    np.pi * reference_diameter**4 / 32.0
+)
+
+# ------------------------------------------------------------
+# IMPLIED SHAFT LENGTH
+# ------------------------------------------------------------
+# From k = G * Jp / L:
+# L = G * Jp / k
+#
+# The same reference diameter is used for all three sections
+# solely to compare the assumed stiffness values.
+# ------------------------------------------------------------
+
+print("\nASSUMPTIONS")
+print("-" * 70)
+
+print(f"Shear modulus             : {shear_modulus / 1e9:.1f} GPa")
+print(f"Reference shaft diameter  : {reference_diameter:.3f} m")
+print(f"Polar second moment Jp    : {polar_moment:.6f} m^4")
+
+print("\nIMPLIED LENGTH FOR EACH STIFFNESS")
+print("-" * 70)
+
+print(
+    f"{'Shaft section':<25}"
+    f"{'Stiffness (MN*m/rad)':>24}"
+    f"{'Implied length (m)':>23}"
+)
+
+print("-" * 72)
+
+for section, stiffness in shaft_stiffnesses.items():
+
+    implied_length = (
+        shear_modulus
+        * polar_moment
+        / stiffness
+    )
+
+    print(
+        f"{section:<25}"
+        f"{stiffness / 1e6:>24.2f}"
+        f"{implied_length:>23.2f}"
+    )
+
+# ------------------------------------------------------------
+# ENGINEERING INTERPRETATION
+# ------------------------------------------------------------
+
+print("\nENGINEERING INTERPRETATION")
+print("-" * 70)
+
+print(
+    "The calculated lengths follow from the assumed diameter,"
+)
+
+print(
+    "material shear modulus, and torsional stiffness."
+)
+
+print(
+    "They are implied lengths, not actual shaft dimensions."
+)
+
+print(
+    "Actual shaft diameters, effective lengths, material"
+)
+
+print(
+    "properties, and coupling details must be established"
+)
+
+print(
+    "before the model can be validated against a real engine."
+)
+
+print(
+    "Do not use these results alone to approve shaft strength"
+)
+
+print(
+    "or determine safe operating speeds."
+)
+
+print("\n" + "=" * 70)
+print("STEP 15 COMPLETE")
+print("=" * 70)
+
+
+
+# ============================================================
+# STEP 16 - ILLUSTRATIVE SHAFT GEOMETRY MODEL
+# ============================================================
+
+print("\n" + "=" * 70)
+print("STEP 16 - ILLUSTRATIVE SHAFT GEOMETRY MODEL")
+print("=" * 70)
+
+# ------------------------------------------------------------
+# EDUCATIONAL ASSUMPTIONS ONLY
+# ------------------------------------------------------------
+# These dimensions do NOT represent verified Sulzer engine data.
+#
+# Each entry contains:
+# section name, diameter (m), length (m), existing stiffness
+# (N*m/rad) from the original four-inertia model.
+# ------------------------------------------------------------
+
+geometry_shear_modulus = 80.0e9  # Pa; illustrative steel value
+
+illustrative_sections = [
+    {
+        "name": "Section 1 (J1-J2)",
+        "diameter": 0.400,
+        "length": 8.0,
+        "existing_stiffness": 23.30e6,
+    },
+    {
+        "name": "Section 2 (J2-J3)",
+        "diameter": 0.450,
+        "length": 8.0,
+        "existing_stiffness": 40.80e6,
+    },
+    {
+        "name": "Section 3 (J3-J4)",
+        "diameter": 0.450,
+        "length": 8.0,
+        "existing_stiffness": 40.80e6,
+    },
+]
+
+# ------------------------------------------------------------
+# CALCULATE GEOMETRY-BASED TORSIONAL STIFFNESS
+# ------------------------------------------------------------
+# For a solid circular shaft:
+#
+# Jp = pi * d^4 / 32
+# k  = G * Jp / L
+#
+# These calculations assume uniform, solid circular shafts.
+# They do not include couplings, flanges, hollow sections,
+# crankshaft geometry, or other local flexibility.
+# ------------------------------------------------------------
+
+print("\nILLUSTRATIVE MATERIAL AND GEOMETRY")
+print("-" * 70)
+
+print(
+    f"Assumed shear modulus: "
+    f"{geometry_shear_modulus / 1e9:.1f} GPa"
+)
+
+print("Assumed shaft material: steel")
+print("Assumed shaft type    : solid circular sections")
+
+print("\nGEOMETRY-BASED STIFFNESS COMPARISON")
+print("-" * 70)
+
+print(
+    f"{'Section':<22}"
+    f"{'Diameter (m)':>14}"
+    f"{'Length (m)':>13}"
+    f"{'Calculated k':>18}"
+    f"{'Difference':>14}"
+)
+
+print("-" * 81)
+
+geometry_stiffnesses = []
+
+for section in illustrative_sections:
+
+    diameter = section["diameter"]
+    length = section["length"]
+
+    polar_moment_geometry = (
+        np.pi * diameter**4 / 32.0
+    )
+
+    calculated_stiffness = (
+        geometry_shear_modulus
+        * polar_moment_geometry
+        / length
+    )
+
+    existing_stiffness = section["existing_stiffness"]
+
+    difference_percent = (
+        (calculated_stiffness - existing_stiffness)
+        / existing_stiffness
+        * 100.0
+    )
+
+    geometry_stiffnesses.append(calculated_stiffness)
+
+    print(
+        f"{section['name']:<22}"
+        f"{diameter:>14.3f}"
+        f"{length:>13.2f}"
+        f"{calculated_stiffness / 1e6:>15.3f} MN"
+        f"{difference_percent:>+12.2f}%"
+    )
+
+# ------------------------------------------------------------
+# ENGINEERING INTERPRETATION
+# ------------------------------------------------------------
+
+print("\nENGINEERING INTERPRETATION")
+print("-" * 70)
+
+print(
+    "The calculated stiffnesses follow from the assumed"
+)
+
+print(
+    "diameters, lengths, and material shear modulus."
+)
+
+print(
+    "The percentage difference compares them with the"
+)
+
+print(
+    "original model's assumed stiffness values."
+)
+
+print(
+    "The original mass and stiffness matrices have NOT been"
+)
+
+print(
+    "changed by this step; earlier modal results are unchanged."
+)
+
+print(
+    "These illustrative dimensions are not verified engine data."
+)
+
+print("\n" + "=" * 70)
+print("STEP 16 COMPLETE")
+print("=" * 70)
+
+
+# ================================================================
+# STEP 17: NATURAL FREQUENCIES AND CRITICAL RPM USING GEOMETRY-BASED
+#          SHAFT STIFFNESSES
+# ================================================================
+
+print("\n" + "=" * 72)
+print("STEP 17: GEOMETRY-BASED NATURAL FREQUENCIES AND CRITICAL RPM")
+print("=" * 72)
+
+# These stiffnesses were calculated in Step 16 from illustrative
+# shaft diameters, lengths, and the assumed shear modulus.
+# They are NOT verified dimensions or stiffnesses for a real engine.
+
+k1_geometry = geometry_stiffnesses[0]
+k2_geometry = geometry_stiffnesses[1]
+k3_geometry = geometry_stiffnesses[2]
+
+# Build a NEW stiffness matrix.
+# Do not modify the original matrix K.
+
+K_geometry = np.array([
+    [k1_geometry, -k1_geometry, 0.0, 0.0],
+    [-k1_geometry, k1_geometry + k2_geometry, -k2_geometry, 0.0],
+    [0.0, -k2_geometry, k2_geometry + k3_geometry, -k3_geometry],
+    [0.0, 0.0, -k3_geometry, k3_geometry]
+], dtype=float)
+
+# Solve the generalized eigenvalue problem using the existing
+# mass matrix M and the new geometry-based stiffness matrix.
+
+eigenvalues_geometry, eigenvectors_geometry = eigh(K_geometry, M)
+
+# Convert eigenvalues to angular frequencies and then to Hz.
+# Clipping protects against tiny negative numerical round-off
+# values for the theoretical zero-frequency rigid-body mode.
+
+omega_geometry = np.sqrt(np.clip(eigenvalues_geometry, 0.0, None))
+frequency_hz_geometry = omega_geometry / (2.0 * np.pi)
+
+# Exclude the rigid-body mode from the flexible-mode comparison.
+flexible_frequencies_geometry = frequency_hz_geometry[
+    frequency_hz_geometry > 0.001
+]
+
+print("\n1. GEOMETRY-BASED SHAFT STIFFNESSES")
+print("-" * 72)
+print(f"Section 1 stiffness: {k1_geometry / 1e6:.3f} MN*m/rad")
+print(f"Section 2 stiffness: {k2_geometry / 1e6:.3f} MN*m/rad")
+print(f"Section 3 stiffness: {k3_geometry / 1e6:.3f} MN*m/rad")
+
+print("\n2. NATURAL FREQUENCIES: ORIGINAL MODEL VS GEOMETRY-BASED MODEL")
+print("-" * 72)
+print(f"{'Flexible mode':<18}{'Original (Hz)':>18}{'Geometry-based (Hz)':>25}")
+
+# The original frequency_hz array was calculated earlier in the script.
+flexible_frequencies_original = np.asarray(frequency_hz)
+flexible_frequencies_original = flexible_frequencies_original[
+    flexible_frequencies_original > 0.001
+]
+
+number_of_modes = min(
+    len(flexible_frequencies_original),
+    len(flexible_frequencies_geometry)
+)
+
+for i in range(number_of_modes):
+    print(
+        f"{i + 1:<18}"
+        f"{flexible_frequencies_original[i]:>18.4f}"
+        f"{flexible_frequencies_geometry[i]:>25.4f}"
+    )
+
+# Calculate possible critical RPM values for several engine-order
+# excitations. Only show values within the 50–105 RPM operating range.
+# Formula: critical RPM = natural frequency (Hz) * 60 / engine order.
+
+geometry_excitation_orders = [6, 12, 18, 24, 30]
+geometry_minimum_rpm = 50.0
+geometry_rated_rpm = 105.0
+
+print("\n3. POSSIBLE CRITICAL RPM VALUES")
+print("-" * 72)
+print(f"Operating range: {geometry_minimum_rpm:.1f}–{geometry_rated_rpm:.1f} RPM")
+print("Only intersections inside this range are listed.")
+print(f"{'Mode':<8}{'Frequency (Hz)':>18}{'Order':>12}{'Critical RPM':>18}")
+
+geometry_critical_count = 0
+
+for mode_index, natural_frequency in enumerate(
+    flexible_frequencies_geometry, start=1
+):
+    for order in geometry_excitation_orders:
+        critical_rpm = 60.0 * natural_frequency / order
+
+        if geometry_minimum_rpm <= critical_rpm <= geometry_rated_rpm:
+            print(
+                f"{mode_index:<8}"
+                f"{natural_frequency:>18.4f}"
+                f"{order:>12}"
+                f"{critical_rpm:>18.2f}"
+            )
+            geometry_critical_count += 1
+
+if geometry_critical_count == 0:
+    print("No calculated intersections fall inside the specified range.")
+
+print("\n4. IMPORTANT INTERPRETATION")
+print("-" * 72)
+print("These are theoretical calculations using illustrative shaft geometry.")
+print("A calculated critical RPM is a candidate for further investigation,")
+print("not proof that harmful resonance will occur at that speed.")
+print("Real-engine assessment requires verified inertias, shaft geometry,")
+print("excitation torques, damping, and validation by a qualified engineer.")
+
+print("\nSTEP 17 COMPLETE")
+print("=" * 72)
+
+
+# ================================================================
+# STEP 18: COMPARE ORIGINAL AND GEOMETRY-BASED CRITICAL RPM VALUES
+# ================================================================
+
+print("\n" + "=" * 78)
+print("STEP 18: COMPARISON OF CRITICAL RPM VALUES")
+print("=" * 78)
+
+# Use the flexible-mode natural frequencies calculated earlier.
+# The rigid-body mode is excluded from both frequency lists.
+
+original_frequencies_step18 = np.asarray(flexible_frequencies_original)
+geometry_frequencies_step18 = np.asarray(flexible_frequencies_geometry)
+
+# Use the same excitation orders and operating range as Step 17.
+orders_step18 = [6, 12, 18, 24, 30]
+minimum_rpm_step18 = 50.0
+maximum_rpm_step18 = 105.0
+
+print("\nOperating range: "
+      f"{minimum_rpm_step18:.1f}–{maximum_rpm_step18:.1f} RPM")
+
+print("\nCandidate critical speeds within the operating range")
+print("-" * 78)
+print(
+    f"{'Mode':<7}"
+    f"{'Order':>8}"
+    f"{'Original RPM':>16}"
+    f"{'Geometry RPM':>16}"
+    f"{'Change RPM':>13}"
+    f"{'Change (%)':>12}"
+)
+
+comparison_count_step18 = 0
+
+number_of_modes_step18 = min(
+    len(original_frequencies_step18),
+    len(geometry_frequencies_step18)
+)
+
+for mode_index in range(number_of_modes_step18):
+    original_frequency = original_frequencies_step18[mode_index]
+    geometry_frequency = geometry_frequencies_step18[mode_index]
+
+    for order in orders_step18:
+        original_rpm = 60.0 * original_frequency / order
+        geometry_rpm = 60.0 * geometry_frequency / order
+
+        original_in_range = (
+            minimum_rpm_step18 <= original_rpm <= maximum_rpm_step18
+        )
+        geometry_in_range = (
+            minimum_rpm_step18 <= geometry_rpm <= maximum_rpm_step18
+        )
+
+        # Display a pair if either result falls inside the operating range.
+        if original_in_range or geometry_in_range:
+            change_rpm = geometry_rpm - original_rpm
+            change_percent = 100.0 * change_rpm / original_rpm
+
+            print(
+                f"{mode_index + 1:<7}"
+                f"{order:>8}"
+                f"{original_rpm:>16.2f}"
+                f"{geometry_rpm:>16.2f}"
+                f"{change_rpm:>+13.2f}"
+                f"{change_percent:>+11.2f}%"
+            )
+
+            comparison_count_step18 += 1
+
+if comparison_count_step18 == 0:
+    print("No candidate critical speeds fall within the operating range.")
+
+print("\nINTERPRETATION")
+print("-" * 78)
+print("Positive changes mean the geometry-based RPM is higher.")
+print("Negative changes mean the geometry-based RPM is lower.")
+print("Percentage change is relative to the original RPM.")
+
+print("\nIMPORTANT LIMITATIONS")
+print("-" * 78)
+print("The shaft dimensions and model inputs are illustrative assumptions.")
+print("These calculations do not establish safe or unsafe engine speeds.")
+print("Real-engine conclusions require verified engineering data and validation.")
+
+print("\nSTEP 18 COMPLETE")
+print("=" * 78)
+
+
+# ================================================================
+# STEP 19: CONSOLIDATED CRITICAL RPM SUMMARY
+# ================================================================
+
+print("\n" + "=" * 104)
+print("STEP 19: CONSOLIDATED CRITICAL RPM SUMMARY")
+print("=" * 104)
+
+# Use the natural frequencies calculated in the earlier steps.
+# The original and geometry-based models remain separate.
+
+orders_step19 = [6, 12, 18, 24, 30]
+minimum_rpm_step19 = 50.0
+maximum_rpm_step19 = 105.0
+
+print(f"\nAssumed operating range: "
+      f"{minimum_rpm_step19:.1f}–{maximum_rpm_step19:.1f} RPM")
+
+print("\nCRITICAL RPM COMPARISON")
+print("-" * 104)
+
+print(
+    f"{'Mode':<7}"
+    f"{'Order':>7}"
+    f"{'Original RPM':>15}"
+    f"{'Geometry RPM':>16}"
+    f"{'Change RPM':>13}"
+    f"{'Change (%)':>12}"
+    f"{'Original in range':>18}"
+    f"{'Geometry in range':>19}"
+)
+
+print("-" * 104)
+
+count_original_step19 = 0
+count_geometry_step19 = 0
+count_comparisons_step19 = 0
+
+number_of_modes_step19 = min(
+    len(flexible_frequencies_original),
+    len(flexible_frequencies_geometry)
+)
+
+for mode_index in range(number_of_modes_step19):
+    original_frequency = flexible_frequencies_original[mode_index]
+    geometry_frequency = flexible_frequencies_geometry[mode_index]
+
+    for order in orders_step19:
+        original_rpm = 60.0 * original_frequency / order
+        geometry_rpm = 60.0 * geometry_frequency / order
+
+        original_in_range = (
+            minimum_rpm_step19 <= original_rpm <= maximum_rpm_step19
+        )
+        geometry_in_range = (
+            minimum_rpm_step19 <= geometry_rpm <= maximum_rpm_step19
+        )
+
+        # Include a row when either model predicts a value
+        # inside the assumed operating range.
+        if original_in_range or geometry_in_range:
+            change_rpm = geometry_rpm - original_rpm
+            change_percent = 100.0 * change_rpm / original_rpm
+
+            original_status = "YES" if original_in_range else "NO"
+            geometry_status = "YES" if geometry_in_range else "NO"
+
+            print(
+                f"{mode_index + 1:<7}"
+                f"{order:>7}"
+                f"{original_rpm:>15.2f}"
+                f"{geometry_rpm:>16.2f}"
+                f"{change_rpm:>+13.2f}"
+                f"{change_percent:>+11.2f}%"
+                f"{original_status:>18}"
+                f"{geometry_status:>19}"
+            )
+
+            count_comparisons_step19 += 1
+
+            if original_in_range:
+                count_original_step19 += 1
+
+            if geometry_in_range:
+                count_geometry_step19 += 1
+
+print("-" * 104)
+
+print("\nSUMMARY")
+print("-" * 50)
+print(f"Candidate values in original model: "
+      f"{count_original_step19}")
+print(f"Candidate values in geometry-based model: "
+      f"{count_geometry_step19}")
+print(f"Rows included in comparison table: "
+      f"{count_comparisons_step19}")
+
+print("\nHOW TO READ THIS TABLE")
+print("-" * 50)
+print("YES means the calculated RPM is inside the assumed operating range.")
+print("NO means the calculated RPM is outside that range.")
+print("A positive change means the geometry-based RPM is higher.")
+print("A negative change means the geometry-based RPM is lower.")
+
+print("\nENGINEERING LIMITATIONS")
+print("-" * 50)
+print("These results use illustrative shaft geometry and model assumptions.")
+print("They identify mathematical candidates, not confirmed harmful resonance.")
+print("Do not use this table to establish safe operating speeds.")
+print("Real-engine assessment requires verified data and qualified validation.")
+
+print("\nSTEP 19 COMPLETE")
+print("=" * 104)
+
+
+# ================================================================
+# STEP 20: VISUALIZE CANDIDATE CRITICAL RPM VALUES
+# ================================================================
+
+import matplotlib.pyplot as plt
+
+print("\n" + "=" * 72)
+print("STEP 20: CRITICAL RPM VISUALIZATION")
+print("=" * 72)
+
+# Use the natural frequencies calculated in earlier steps.
+# The rigid-body mode has already been excluded from these arrays.
+
+orders_step20 = [6, 12, 18, 24, 30]
+minimum_rpm_step20 = 50.0
+maximum_rpm_step20 = 105.0
+
+# Prepare the plot.
+fig_step20, ax_step20 = plt.subplots(figsize=(11, 6.5))
+
+# Shade the assumed operating range.
+ax_step20.axvspan(
+    minimum_rpm_step20,
+    maximum_rpm_step20,
+    alpha=0.15,
+    label="Assumed operating range: 50–105 RPM"
+)
+
+# Add one row for each candidate comparison.
+plot_labels_step20 = []
+plot_row_step20 = 0
+original_legend_added_step20 = False
+geometry_legend_added_step20 = False
+
+number_of_modes_step20 = min(
+    len(flexible_frequencies_original),
+    len(flexible_frequencies_geometry)
+)
+
+for mode_index in range(number_of_modes_step20):
+    original_frequency = flexible_frequencies_original[mode_index]
+    geometry_frequency = flexible_frequencies_geometry[mode_index]
+
+    for order in orders_step20:
+        original_rpm = 60.0 * original_frequency / order
+        geometry_rpm = 60.0 * geometry_frequency / order
+
+        original_in_range = (
+            minimum_rpm_step20 <= original_rpm <= maximum_rpm_step20
+        )
+        geometry_in_range = (
+            minimum_rpm_step20 <= geometry_rpm <= maximum_rpm_step20
+        )
+
+        # Plot candidates where either model's result is in range.
+        if original_in_range or geometry_in_range:
+            y_position = plot_row_step20
+
+            # Connect the two predictions for visual comparison.
+            ax_step20.plot(
+                [original_rpm, geometry_rpm],
+                [y_position, y_position],
+                linestyle="-",
+                linewidth=1,
+                alpha=0.7
+            )
+
+            # Original-model prediction.
+            original_label = (
+                "Original model"
+                if not original_legend_added_step20
+                else None
+            )
+
+            ax_step20.plot(
+                original_rpm,
+                y_position,
+                marker="o",
+                linestyle="None",
+                markersize=8,
+                label=original_label
+            )
+            original_legend_added_step20 = True
+
+            # Geometry-based prediction.
+            geometry_label = (
+                "Geometry-based model"
+                if not geometry_legend_added_step20
+                else None
+            )
+
+            ax_step20.plot(
+                geometry_rpm,
+                y_position,
+                marker="x",
+                linestyle="None",
+                markersize=9,
+                markeredgewidth=2,
+                label=geometry_label
+            )
+            geometry_legend_added_step20 = True
+
+            plot_labels_step20.append(
+                f"Mode {mode_index + 1}, order {order}"
+            )
+
+            plot_row_step20 += 1
+
+# Configure axes and title.
+ax_step20.set_yticks(range(len(plot_labels_step20)))
+ax_step20.set_yticklabels(plot_labels_step20)
+ax_step20.invert_yaxis()
+
+ax_step20.set_xlim(45, 110)
+ax_step20.set_xlabel("Engine speed (RPM)")
+ax_step20.set_ylabel("Vibration mode and excitation order")
+ax_step20.set_title(
+    "Candidate Critical RPM Values\n"
+    "Original Model vs Geometry-Based Model"
+)
+
+ax_step20.grid(True, axis="x", linestyle="--", alpha=0.5)
+ax_step20.legend(loc="best")
+fig_step20.tight_layout()
+
+print("Operating range shown: 50–105 RPM")
+print("Circle markers: original model")
+print("X markers: geometry-based model")
+print("Connecting lines: change between model predictions")
+print("Displaying the critical RPM comparison plot.")
+
+plt.show()
+
+print("\nIMPORTANT:")
+print("This is an educational visualization, not a safety chart.")
+print("The candidate speeds are not confirmed harmful resonance speeds.")
+print("\nSTEP 20 COMPLETE")
+print("=" * 72)
+
+
+

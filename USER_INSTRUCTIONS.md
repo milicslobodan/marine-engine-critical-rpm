@@ -1,668 +1,531 @@
-# USER INSTRUCTIONS — Marine Engine Critical RPM
+# USER INSTRUCTIONS --- Marine Engine Critical RPM
 
 ## 1. Purpose of This Project
 
-This project performs a simplified torsional vibration analysis of a representative slow-speed, two-stroke marine main engine.
+This project performs a simplified torsional-vibration analysis of a
+representative slow-speed, two-stroke marine main engine.
 
-The model demonstrates:
+The program demonstrates:
 
-* torsional natural frequencies
-* excitation orders
-* critical RPMs
-* critical-speed diagrams
-* simplified forced torsional response
-* alternating torsional torque
-* torsional shear stress
-* shaft-diameter sensitivity
+-   torsional natural frequencies;
+-   excitation orders and candidate critical RPMs;
+-   critical-speed diagrams;
+-   simplified forced torsional response;
+-   alternating torsional torque and nominal torsional shear stress;
+-   shaft-diameter sensitivity;
+-   illustrative shaft geometry and geometry-based stiffness;
+-   comparison of the original and geometry-based models;
+-   a final critical-RPM comparison visualization.
 
-The project is an **educational engineering model**.
+This is an **educational engineering model**, not an approved marine
+shafting or torsional-vibration calculation.
 
-It is not intended to replace an approved marine shafting or torsional-vibration calculation.
-
----
-
-# 2. System Requirements
+## 2. System Requirements
 
 The project is designed for Windows.
 
-Recommended software:
+Required software and Python packages:
 
-* Windows 10 or Windows 11
-* Python 3.x
-* PowerShell
-* Notepad++ (optional, for editing)
-* NumPy
-* Matplotlib
+-   Windows 10 or Windows 11;
+-   Python 3.x;
+-   PowerShell;
+-   NumPy;
+-   SciPy;
+-   Matplotlib.
 
----
+Notepad++ is optional but recommended for editing the Python program.
 
-# 3. Project Location
+## 3. Project Location
 
-The example project location is:
+The project folder is:
 
-```text
+``` text
 C:\dev1\marine-engine-critical-rpm
 ```
 
 The main Python program is:
 
-```text
+``` text
 C:\dev1\marine-engine-critical-rpm\torsional_model.py
 ```
 
 The documentation files are:
 
-```text
+``` text
 C:\dev1\marine-engine-critical-rpm\README.md
 C:\dev1\marine-engine-critical-rpm\USER_INSTRUCTIONS.md
 ```
 
----
+## 4. Open PowerShell
 
-# 4. Open PowerShell
+Open Windows PowerShell from the Start menu, or search for `PowerShell`.
 
-Open Windows PowerShell.
-
-You can use:
-
-**Start → Windows PowerShell**
-
-or search for:
-
-```text
-PowerShell
-```
-
----
-
-# 5. Go to the Project Directory
+## 5. Go to the Project Directory
 
 Enter:
 
-```powershell
+``` powershell
 cd C:\dev1\marine-engine-critical-rpm
 ```
 
-The PowerShell prompt should become similar to:
+The prompt should look similar to:
 
-```text
+``` text
 PS C:\dev1\marine-engine-critical-rpm>
 ```
 
----
+## 6. Activate the Python Virtual Environment
 
-# 6. Activate the Python Virtual Environment
+Activate the project's local virtual environment:
 
-The project uses a local Python virtual environment called `.venv`.
-
-Activate it with:
-
-```powershell
+``` powershell
 .\.venv\Scripts\Activate.ps1
 ```
 
-After activation, the prompt should contain:
+The prompt should now contain `(.venv)`, for example:
 
-```text
-(.venv)
-```
-
-For example:
-
-```text
+``` text
 (.venv) PS C:\dev1\marine-engine-critical-rpm>
 ```
 
-This means the project's Python environment is active.
+This indicates that the project environment is active.
 
----
-
-# 7. Check Python
+## 7. Check Python
 
 Run:
 
-```powershell
+``` powershell
 python --version
-```
-
-You should receive a Python version such as:
-
-```text
-Python 3.x.x
-```
-
-Also check which Python executable is being used:
-
-```powershell
 python -c "import sys; print(sys.executable)"
 ```
 
-It should point to the project virtual environment:
+The executable path should point to:
 
-```text
+``` text
 C:\dev1\marine-engine-critical-rpm\.venv\Scripts\python.exe
 ```
 
----
+## 8. Check Required Python Packages
 
-# 8. Check Required Python Packages
+Check the packages:
 
-The project requires NumPy and Matplotlib.
-
-Check NumPy:
-
-```powershell
-python -c "import numpy; print(numpy.__version__)"
+``` powershell
+python -c "import numpy; print('NumPy', numpy.__version__)"
+python -c "import scipy; print('SciPy', scipy.__version__)"
+python -c "import matplotlib; print('Matplotlib', matplotlib.__version__)"
 ```
 
-Check Matplotlib:
+The project uses NumPy for numerical arrays and matrix operations, SciPy
+for the generalized eigenvalue calculation, and Matplotlib for plots.
 
-```powershell
-python -c "import matplotlib; print(matplotlib.__version__)"
+If a package is missing, install all required packages in the active
+virtual environment:
+
+``` powershell
+python -m pip install numpy scipy matplotlib
 ```
 
-If either package is missing, install the required packages:
+## 9. Check the Python File and Run the Analysis
 
-```powershell
-python -m pip install numpy matplotlib
+First, check the program's syntax:
+
+``` powershell
+python -m py_compile torsional_model.py
 ```
 
----
+If this command returns to the prompt without an error message, the
+syntax check passed.
 
-# 9. Run the Complete Analysis
+Then run the complete analysis:
 
-With the virtual environment activated, run:
-
-```powershell
+``` powershell
 python torsional_model.py
 ```
 
-The program will execute the complete analysis.
+Read the console output and completion messages. Matplotlib figures may
+appear in separate windows depending on the local plotting environment.
 
-The program contains Steps 1–14.
+## 10. What the Program Covers
 
----
+The completed program has been developed through Step 20:
 
-# 10. What Happens During Execution
-
-The program performs the following sequence:
-
-```text
-Step 1
-Engine and shafting data
-        ↓
-Step 2
-Rotational inertias
-        ↓
-Step 3
-Torsional stiffness
-        ↓
-Step 4
-Inertia matrix
-        ↓
-Step 5
-Stiffness matrix
-        ↓
-Step 6
-System verification
-        ↓
-Step 7
-Natural-frequency calculation
-        ↓
-Step 8
-Mode shapes
-        ↓
-Step 9
-Critical RPM calculation
-        ↓
-Step 10
-Excitation-order analysis
-        ↓
+``` text
+Steps 1–10
+Engine and shafting inputs, matrices, verification,
+natural frequencies, mode shapes, and critical RPMs
+             ↓
 Step 11
 Critical-speed diagram
-        ↓
+             ↓
 Step 12
-Forced torsional response
-        ↓
+Simplified forced torsional response
+             ↓
 Step 13
-Torsional vibration stress
-        ↓
+Alternating torque and torsional stress
+             ↓
 Step 14
-Shaft diameter sensitivity
+Shaft-diameter sensitivity
+             ↓
+Step 15
+Shaft stiffness and implied length calculations
+             ↓
+Step 16
+Illustrative shaft geometry and geometry-based stiffness
+             ↓
+Step 17
+Geometry-based natural frequencies and candidate speeds
+             ↓
+Step 18
+Original-versus-geometry-based comparison
+             ↓
+Step 19
+Consolidated model summary
+             ↓
+Step 20
+Critical-RPM comparison visualization
 ```
 
----
+## 11. Representative Engine and Original Model
 
-# 11. Important Results
+The example uses:
 
-The completed representative model uses:
-
-```text
-Engine:
-    6 cylinders
-    2-stroke
-    12,000 HP
-    105 RPM rated speed
+``` text
+Engine class:      Sulzer-class representative
+Cylinders:         6
+Cycle:             2-stroke
+Representative power: 12,000 HP
+Rated speed:       105 RPM
+Operating range:   50–105 RPM
 ```
 
 Representative rotational inertias:
 
-```text
-Engine          12,000 kg·m²
-Intermediate     2,000 kg·m²
-Tail shaft       2,500 kg·m²
-Propeller       18,000 kg·m²
+``` text
+J1 = 12,000 kg·m²
+J2 =  2,000 kg·m²
+J3 =  2,500 kg·m²
+J4 = 18,000 kg·m²
 ```
 
-Representative torsional stiffnesses:
+Original shaft stiffnesses:
 
-```text
+``` text
 k1 = 23.30 MN·m/rad
 k2 = 40.80 MN·m/rad
 k3 = 40.80 MN·m/rad
 ```
 
----
+These are representative assumptions, not verified data from a
+particular production engine.
 
-# 12. Natural Frequencies
+## 12. Original-Model Natural Frequencies
 
-The calculated torsional natural frequencies are:
+The three flexible torsional natural frequencies are:
 
-```text
-6.1509 Hz
-20.2574 Hz
-36.0141 Hz
+``` text
+Mode 1:  6.1509 Hz
+Mode 2: 20.2574 Hz
+Mode 3: 36.0141 Hz
 ```
 
-There is also a rigid-body mode whose frequency is effectively zero.
+The model also has a rigid-body mode with a frequency effectively equal
+to zero.
 
----
+## 13. Original-Model Candidate Critical RPMs
 
-# 13. Critical RPM
+The program examines excitation orders 6, 12, 18, 24, and 30. Candidate
+intersections inside the representative 50--105 RPM operating range are:
 
-For the main 6th-order excitation, the first torsional natural frequency produces:
+  Mode       Order   Candidate speed
+  -------- ------- -----------------
+  Mode 1       6th         61.51 RPM
+  Mode 2      12th        101.29 RPM
+  Mode 2      18th         67.52 RPM
+  Mode 2      24th         50.64 RPM
+  Mode 3      24th         90.04 RPM
+  Mode 3      30th         72.03 RPM
 
-```text
-Critical RPM ≈ 61.51 RPM
-```
+A mathematical intersection is a candidate critical speed. It does not,
+by itself, prove that harmful resonance will occur.
 
-This is inside the representative operating range:
+## 14. Forced Response, Torque, and Stress
 
-```text
-50–105 RPM
-```
+The forced-response and stress sections use simplified assumptions,
+including representative excitation torque and damping. Their numerical
+results depend on those assumptions.
 
-The critical-speed diagram generated by the program shows the relationship between excitation orders and torsional natural frequencies.
+For the most reliable values, run the current saved `torsional_model.py`
+and refer to its console output. Do not rely on numbers copied from an
+older version of this document if they differ from the current program.
 
----
+The nominal stress formula used for a solid circular shaft is:
 
-# 14. Forced Response
-
-The simplified forced-response calculation uses:
-
-```text
-Damping ratio       : 0.030
-Excitation torque   : 1,000,000 N·m
-```
-
-The calculated maximum response occurs at approximately:
-
-```text
-61.45 RPM
-```
-
-with a simplified torsional angle amplitude of approximately:
-
-```text
-41.002531°
-```
-
-This is intentionally a simplified educational calculation.
-
-The large calculated angle should not be interpreted as the actual shaft angle of a real marine engine.
-
----
-
-# 15. Torsional Stress
-
-For the representative shaft diameter:
-
-```text
-0.800 m
-```
-
-the model calculates:
-
-```text
-Maximum torsional angle : 41.002531°
-Alternating torque      : 16.674 MN·m
-Torsional stress        : 165.861 MPa
-```
-
-These results depend directly on the assumptions used in the simplified forced-response model.
-
----
-
-# 16. Shaft Diameter Sensitivity
-
-Step 14 investigates how shaft diameter affects torsional shear stress.
-
-The calculated results are:
-
-```text
-Diameter       Stress
---------------------------------
-0.60 m         393.152 MPa
-0.65 m         309.225 MPa
-0.70 m         247.583 MPa
-0.75 m         201.294 MPa
-0.80 m         165.861 MPa
-0.85 m         138.279 MPa
-0.90 m         116.489 MPa
-0.95 m          99.047 MPa
-1.00 m          84.921 MPa
-```
-
-The relationship is:
-
-```text
+``` text
 τ = 16T / (πd³)
 ```
 
-Therefore:
+This is an educational estimate. It is not a fatigue assessment or an
+approved shaft-design calculation.
 
-```text
+## 15. Shaft-Diameter Sensitivity
+
+Step 14 investigates how the nominal torsional shear-stress estimate
+changes with shaft diameter while holding the calculated alternating
+torque constant.
+
+The relationship is:
+
+``` text
 τ ∝ 1/d³
 ```
 
-Increasing shaft diameter significantly reduces calculated torsional stress when the alternating torque is kept constant.
+A larger diameter reduces the calculated nominal stress under this
+fixed-torque assumption. In a real system, changing diameter also
+changes shaft stiffness and may shift natural frequencies and response.
 
----
+## 16. Step 15 --- Shaft Stiffness and Implied Lengths
 
-# 17. Viewing the Program in Notepad++
+Step 15 relates torsional stiffness to shaft geometry using:
 
-The recommended editor for this project is Notepad++.
+``` text
+k = GJp / L
+Jp = πd⁴ / 32
+```
 
-Open the Python program with:
+Here, `G` is the shear modulus, `Jp` is the polar second moment of area,
+`L` is shaft length, and `d` is the diameter for a solid circular shaft.
 
-```powershell
+The calculated lengths are implied by the selected stiffness, material
+modulus, and diameter. They are not confirmed physical lengths of an
+actual engine or vessel shaft line.
+
+## 17. Step 16 --- Illustrative Shaft Geometry
+
+Step 16 introduces an illustrative geometry-based case using an assumed
+shear modulus of 80 GPa:
+
+  Shaft section     Diameter   Length   Calculated stiffness
+  --------------- ---------- -------- ----------------------
+  Section 1          0.400 m    8.0 m        25.133 MN·m/rad
+  Section 2          0.450 m    8.0 m        40.258 MN·m/rad
+  Section 3          0.450 m    8.0 m        40.258 MN·m/rad
+
+These are assumed dimensions for demonstrating the method, not actual
+manufacturer data.
+
+## 18. Step 17 --- Geometry-Based Natural Frequencies
+
+The geometry-based case produces these flexible natural frequencies:
+
+``` text
+Mode 1:  6.2326 Hz
+Mode 2: 20.5097 Hz
+Mode 3: 35.9748 Hz
+```
+
+The corresponding candidate speeds inside 50--105 RPM are approximately:
+
+``` text
+Mode 1,  6th order: 62.33 RPM
+Mode 2, 12th order: 102.55 RPM
+Mode 2, 18th order: 68.37 RPM
+Mode 2, 24th order: 51.27 RPM
+Mode 3, 24th order: 89.94 RPM
+Mode 3, 30th order: 71.95 RPM
+```
+
+These results belong to the illustrative geometry-based model.
+
+## 19. Steps 18--20 --- Comparison and Visualization
+
+Step 18 compares the candidate speeds from the original and
+geometry-based models:
+
+  Mode       Order     Original   Geometry-based
+  -------- ------- ------------ ----------------
+  Mode 1       6th    61.51 RPM        62.33 RPM
+  Mode 2      12th   101.29 RPM       102.55 RPM
+  Mode 2      18th    67.52 RPM        68.37 RPM
+  Mode 2      24th    50.64 RPM        51.27 RPM
+  Mode 3      24th    90.04 RPM        89.94 RPM
+  Mode 3      30th    72.03 RPM        71.95 RPM
+
+Step 19 consolidates the results. Step 20 creates a visualization of the
+critical-RPM comparison.
+
+The Step 20 plot uses circle markers for the original model, X markers
+for the geometry-based model, and connecting lines to show the
+differences between their predictions. The representative operating
+range is 50--105 RPM.
+
+If the plot window does not appear, check the console output first. The
+program may have completed without the figure being visible, depending
+on the plotting environment. Follow any plot-display instructions
+already included in the current program; do not paste Python statements
+directly into PowerShell as if they were PowerShell commands.
+
+## 20. Open the Program in Notepad++
+
+If Notepad++ is installed in the standard location, open the program
+with:
+
+``` powershell
 & "C:\Program Files\Notepad++\notepad++.exe" "C:\dev1\marine-engine-critical-rpm\torsional_model.py"
 ```
 
-Do not use:
+Typing `notepad++ torsional_model.py` may not work unless Notepad++ has
+been added to the Windows PATH.
 
-```powershell
-notepad++ torsional_model.py
-```
+## 21. Editing the Program
 
-unless Notepad++ has been added to the Windows PATH.
+If you decide to modify the model:
 
----
+1.  Make a backup of `torsional_model.py`.
+2.  Open the file in Notepad++.
+3.  Make the intended changes.
+4.  Save with **Ctrl + S**.
+5.  Return to PowerShell.
+6.  Run the syntax check and then the program:
 
-# 18. Editing the Program
-
-Before changing the model, make a backup of:
-
-```text
-torsional_model.py
-```
-
-For example:
-
-```text
-torsional_model_backup.py
-```
-
-When modifying the program:
-
-1. Open `torsional_model.py`.
-2. Make the required change.
-3. Save with **Ctrl + S**.
-4. Return to PowerShell.
-5. Run:
-
-```powershell
+``` powershell
+python -m py_compile torsional_model.py
 python torsional_model.py
 ```
 
----
+For the completed project, further code changes are optional.
 
-# 19. If Matplotlib Does Not Open a Graph
+## 22. If PowerShell Blocks Activation
 
-If the program reports:
+If PowerShell reports an execution-policy error when activating `.venv`,
+run:
 
-```text
-ModuleNotFoundError: No module named 'matplotlib'
+``` powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
 
-install Matplotlib:
+Then activate the environment:
 
-```powershell
-python -m pip install matplotlib
+``` powershell
+.\.venv\Scripts\Activate.ps1
 ```
 
-Then verify:
+This policy change applies only to the current PowerShell session.
 
-```powershell
-python -c "import matplotlib; print(matplotlib.__version__)"
+## 23. If a Python Package Is Missing
+
+If an error says `ModuleNotFoundError` for NumPy, SciPy, or Matplotlib,
+make sure `.venv` is activated and install the packages:
+
+``` powershell
+python -m pip install numpy scipy matplotlib
+```
+
+Then verify imports:
+
+``` powershell
+python -c "import numpy, scipy, matplotlib; print('Required packages are available')"
 ```
 
 Run the program again:
 
-```powershell
+``` powershell
 python torsional_model.py
 ```
 
----
+## 24. Stop the Program
 
-# 20. If NumPy Is Missing
+To interrupt a running program in PowerShell, press:
 
-If Python reports:
-
-```text
-ModuleNotFoundError: No module named 'numpy'
-```
-
-run:
-
-```powershell
-python -m pip install numpy
-```
-
-Then run:
-
-```powershell
-python torsional_model.py
-```
-
----
-
-# 21. If the Virtual Environment Is Not Active
-
-If the PowerShell prompt does not contain:
-
-```text
-(.venv)
-```
-
-activate the environment:
-
-```powershell
-cd C:\dev1\marine-engine-critical-rpm
-.\.venv\Scripts\Activate.ps1
-```
-
-Then:
-
-```powershell
-python torsional_model.py
-```
-
----
-
-# 22. If PowerShell Blocks Script Execution
-
-If PowerShell reports an execution-policy error when activating `.venv`, use:
-
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-```
-
-Then activate:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-The change applies only to the current PowerShell session.
-
----
-
-# 23. Stop the Program
-
-If the program is running and you need to stop it, press:
-
-```text
+``` text
 Ctrl + C
 ```
 
----
+## 25. Deactivate the Virtual Environment
 
-# 24. Close the Virtual Environment
+When finished, you may deactivate the environment:
 
-When finished working on the project, you can deactivate the virtual environment:
-
-```powershell
+``` powershell
 deactivate
 ```
 
-The prompt will return to:
+This is optional. Closing PowerShell also ends the active terminal
+session.
 
-```text
-PS C:\dev1\marine-engine-critical-rpm>
-```
+## 26. Recommended Startup Procedure
 
----
+For an ordinary future session, run these commands in PowerShell:
 
-# 25. Recommended Complete Startup Procedure
-
-For future sessions, the simplest procedure is:
-
-### Command 1
-
-```powershell
+``` powershell
 cd C:\dev1\marine-engine-critical-rpm
-```
-
-### Command 2
-
-```powershell
 .\.venv\Scripts\Activate.ps1
-```
-
-### Command 3
-
-```powershell
 python torsional_model.py
 ```
 
-That's all that is required to run the completed project.
+To check syntax before running, use:
 
----
-
-# 26. Recommended Editing Procedure
-
-To edit the program:
-
-### Open the project
-
-```powershell
-cd C:\dev1\marine-engine-critical-rpm
+``` powershell
+python -m py_compile torsional_model.py
 ```
 
-### Activate Python
+## 27. Engineering Caution
 
-```powershell
-.\.venv\Scripts\Activate.ps1
+The model uses assumed or representative values for inertias,
+stiffnesses, excitation torque, damping, shaft diameter, and
+illustrative shaft geometry. Changing these inputs changes the results.
+
+The calculated intersections are candidate critical speeds only. The
+project does not validate a real engine or vessel shaft line and must
+not be used to establish safe operating limits.
+
+A real marine torsional-vibration study requires actual manufacturer
+data, a suitable detailed analysis, and appropriate professional review.
+
+## 28. Project Completion
+
+The educational project is complete through:
+
+``` text
+STEP 20 — CRITICAL RPM COMPARISON VISUALIZATION
 ```
 
-### Open the Python file
+The completed workflow covers:
 
-```powershell
-& "C:\Program Files\Notepad++\notepad++.exe" "C:\dev1\marine-engine-critical-rpm\torsional_model.py"
-```
-
-### Save changes
-
-Use:
-
-```text
-Ctrl + S
-```
-
-### Run
-
-```powershell
-python torsional_model.py
-```
-
----
-
-# 27. Engineering Caution
-
-This project contains assumed engineering parameters.
-
-The following values are representative assumptions:
-
-* engine inertias
-* shaft stiffnesses
-* excitation torque
-* damping ratio
-* shaft diameter
-* excitation orders
-
-Changing these parameters changes the calculated results.
-
-The results should therefore be treated as **engineering examples and educational calculations**, not as verified data for a particular vessel or engine.
-
-A real marine torsional vibration study requires actual manufacturer and shafting data and normally involves detailed analysis and verification.
-
----
-
-# 28. Project Completion
-
-The project is considered complete at:
-
-```text
-STEP 14 - SHAFT DIAMETER SENSITIVITY ANALYSIS
-```
-
-The completed analysis covers:
-
-```text
-✓ Engine model
-✓ Inertia model
-✓ Torsional stiffness model
-✓ Matrix formulation
-✓ Natural frequencies
-✓ Mode shapes
-✓ Critical RPM calculation
-✓ Excitation-order analysis
+``` text
+✓ Engine and shafting model
+✓ Inertia and stiffness matrices
+✓ System verification
+✓ Natural frequencies and mode shapes
+✓ Critical RPM and excitation-order analysis
 ✓ Critical-speed diagram
-✓ Forced torsional response
-✓ Alternating torque
-✓ Torsional shear stress
-✓ Shaft diameter sensitivity
+✓ Simplified forced response
+✓ Alternating torque and nominal torsional stress
+✓ Shaft-diameter sensitivity
+✓ Implied shaft-length calculation
+✓ Illustrative geometry-based stiffness
+✓ Geometry-based natural frequencies and candidate speeds
+✓ Original-versus-geometry-based comparison
+✓ Consolidated summary
+✓ Critical-RPM comparison visualization
 ```
 
----
+No additional programming step is required just to document the current
+educational project.
 
-# 29. Final Command
+## 29. Final Command
 
 To run the completed project:
 
-```powershell
+``` powershell
 cd C:\dev1\marine-engine-critical-rpm
 .\.venv\Scripts\Activate.ps1
-p
+python torsional_model.py
 ```
+
+To perform the syntax check first:
+
+``` powershell
+python -m py_compile torsional_model.py
+```
+
+Remember: these are educational model results, not approved
+marine-engine safety calculations.
